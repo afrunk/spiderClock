@@ -3,3 +3,94 @@ A: Mysql 如果想要实现自动递增只能设置一个主键，在主键的�
 
 Q: 设计到的技术点
 A: 爬虫、数据库
+
+Q: mysql存储过程中用变量做表名
+A: 实现不了
+
+Q: 如何实现随机字符串不重复为图片命名
+A: https://blog.csdn.net/liangkaiping0525/article/details/82859286
+代码：# 生成随机图片名
+    import random, string
+    s = string.ascii_letters + string.digits
+    print(s)
+
+    n = [''.join(random.choices(s, k=12)) for I in range(60000)] #存储随机生成字符串的列表
+    # print(n)
+    return n
+
+Q: 如何判断每个小目录的商品有多少页
+A: 访问小目录的第一页，可以在首页得到该链接，然后进入第一页之后抓取页数后面的链接，拼凑访问链接即可
+
+
+## 2019-8-18
+'''
+完成任务：
+- 获取到页面的内容并且进行了解析提取
+
+难点1：即便是一个类目下的商品信息的导航栏也是不同的如何将信息存入数据库对应的列呢？
+2019-8-19解决
+- 我首先需要提取出来所有的商品信息的导航栏进行设计表：需要添加大类目、小类目的列名 这个需要有条理的添加 （程序设计的部分）
+- 我需要将所有的页面的导航栏的信息提取出来之后存入一个列表，然后再写入数据库的时候调用该列表填充该写入的列名以实现各个列都可以相对应的填充
+
+
+难点2：如何去实现断点续传呢？
+将需要爬取的数据的链接即大类目、小类目的链接分类，爬取好了之后写入到本地的日志中
+如果完成了某一部分的爬取效果之后将该类目从该日志中删除掉
+然后将每一个类目的爬取日志都写入到本地
+如果在其中发现了问题 则进行自动查询
+
+难点3：如何实现大批量的数据爬取速度快且不被反爬
+？
+
+难点4：如何将图片保存下来之后可以快速的查找到
+
+解决途径：
+    首先需要学习 python 的程序设计，这个可以参考 《python从入门到实践》这本书
+    然后不断地简洁 码云、Github上地项目，同时将本项目 Push 到 Github 上去
+    通过 Github 来记录学习过程
+
+'''
+
+## 2019-8-19
+'''
+完成任务：
+- 完成导航栏的不同类型匹配，将其处理成合适的格式
+
+    处理后列表属性值           含义                       完成度
+    diginum                 Digi-Key Part Number        1
+    ManufacturePartNumber   Manufacturer Part Number    1
+    PaKind                  小类目                       1
+    Kind                    大类目                       1
+    QuantityAvailable       Quantity Available          1
+    Manufacture             Manufacturer                1
+    Description             Description                 1
+    Price                   price                       1
+    Series                  Series                      1
+    infourl                 详情链接页                   1
+    PicName                 图片链接                     1
+    ParaData                其他参数项                   1
+    minmumQuantity          Minimum Quantity            1
+- 将数据存入到数据库（包括图片下载下来之后保存后的链接存入数据库、大目录、小目录、详情页、）
+- 构建爬取链接库
+
+
+
+建表属性顺序-和爬取得到的元素列表相对应
+    id
+    Kind
+    PaKind
+    infourl
+    PicName
+    diginum
+    ManufacturePartNumber
+    Manufacturer
+    Description
+    QuantityAvailable
+    Price
+    minmumQuantity
+    Series
+    ParaData
+
+
+
+'''
