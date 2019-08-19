@@ -1,0 +1,5 @@
+Q: 1075 Incorrect table definition there can be only one auto column
+A: Mysql 如果想要实现自动递增只能设置一个主键，在主键的位置下进行设置
+
+Q: 设计到的技术点
+A: 爬虫、数据库
