@@ -1,3 +1,11 @@
+# 爬取的时候需要修改的地方
+'''
+- 表名：
+ - get_html_sensor() 函数中更新链接状态
+ - read_all_urls() 获取链接存入数据
+ - get_images_new() 获取图片链接
+'''
+
 import requests
 from bs4 import BeautifulSoup
 import pymysql
@@ -41,12 +49,12 @@ def write_database_operation(tdsList,itemAll):
     print("成功链接数据库")
     try:
         sql = """
-        INSERT IGNORE INTO data (Kind,PaKind,infourl,imageUrl,imagesPath,diginum,ManufacturePartNumber,Manufacturer,Description,QuantityAvailable,price,minmumQuantity,Series,ParaData) 
+        INSERT IGNORE INTO NewData (Kind,PaKind,infourl,imageUrl,imagesPath,diginum,ManufacturePartNumber,Manufacturer,Description,QuantityAvailable,price,minmumQuantity,Series,ParaData) 
         VALUES('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')"""\
         .format(tdsList[0],tdsList[1],tdsList[2],tdsList[3],tdsList[4],tdsList[5],tdsList[6],tdsList[7],tdsList[8],tdsList[9],tdsList[10],tdsList[11],tdsList[12],itemAll)
         print(sql)
-        cursor.execute(sql)
-        db.commit()
+        cursor.execute(sql) # 执行命令
+        db.commit() # 提交事务
     except:
         pass
 
@@ -64,42 +72,49 @@ def create_random():
     return n
 
 
+# 废弃
 # 下载图片和返回给数据库一个图片的路径
 # 传入大类目的名字 因为导出使用的是大类目 后续使用大类目作为文件夹名
 # 图片的名字使用十二位随机字符串
-# 访问速度 所以使用的新韩淑
-def get_images(folderName,imageUrl):
-    # 随机生成字符串
-    n =create_random()
-    # 保存文件夹的名字即我们的大目录名
-    daleimu =folderName
-    # 是否有图片 如果没有图片使用统一的默认无图片路径 如果有的话在爬取和存储
-    if imageUrl == 'photo not available':
-        filename = 'pna_en.jpg'
-    else:
-        # respone = requests.get('https://'+imageUrl,headers=headers)
-        dirname = daleimu
-        if os.path.exists(daleimu) == False:
-            os.makedirs(daleimu) #需要在爬取一个新的类目时即创建文件夹
-        filename = dirname +'/'+ n[0]+'.JPG'
-        print(filename)
-        # fp = open(filename,'wb')
-        # fp.write(respone.content)
-        # fp.close()
-    return filename
+# 访问速度 所以使用的新函数
+# def get_images_No(folderName,imageUrl):
+#     # 随机生成字符串
+#     n =create_random()
+#     # 保存文件夹的名字即我们的大目录名
+#     daleimu =folderName
+#     # 是否有图片 如果没有图片使用统一的默认无图片路径 如果有的话在爬取和存储
+#     if imageUrl == 'photo not available':
+#         filename = 'pna_en.jpg'
+#     else:
+#         # respone = requests.get('https://'+imageUrl,headers=headers)
+#         dirname = daleimu
+#         if os.path.exists(daleimu) == False:
+#             os.makedirs(daleimu) #需要在爬取一个新的类目时即创建文件夹
+#         filename = dirname +'/'+ n[0]+'.JPG'
+#         print(filename)
+#         # fp = open(filename,'wb')
+#         # fp.write(respone.content)
+#         # fp.close()
+#     return filename
 
 
 # 直接从数据库中读取图片链接和id下载下来然后存入三个文件夹下
-def get_images_new(ID,imageUrl):
-    if imageUrl == 'photo not available':
-        filename = 'pna_en.jpg'
-    else:
-        respone = requests.get('https://'+imageUrl,headers=headers)
-        filename = ID+'.JPG'
-        print(filename)
-        fp = open(filename,'wb')
-        fp.write(respone.content)
-        fp.close()
+def get_images_new():
+    try:
+        sql = 'select imgerUrl, from urlsOther ' #
+        cursor.execute(sql)
+        for i in cursor:
+            if imageUrl == 'photo not available':
+                filename = 'pna_en.jpg'
+            else:
+                respone = requests.get('https://'+imageUrl,headers=headers)
+                filename = ID+'.JPG'
+                print(filename)
+                fp = open(filename,'wb')
+                fp.write(respone.content)
+                fp.close()
+    except:
+        pass
 
 navigationBars = [] # 原属性栏列表
 navigationBarsReally = [0,0,0,0,0] # 处理后属性栏列表 因为我们需要为前面的三个选项赋值 所以必须先定义
@@ -257,14 +272,58 @@ def get_html_sensor(url):
         # 调用写入数据库的函数将值传入数据库
         # 必须在数据更新前进行写入操作
         write_database_operation(tdsList,itemAll)
+    sql = "update urlsOther set isOrNoGot = 1 where url = '%s'" % (url)  # 如果已经被爬取过则修改 isOrNoGot 为 1
+    try:
+        cursor.execute(sql)  # 执行命令
+        db.commit()  # 提交事务
+    except:
+        db.rollback()  # 回滚
 
+    # 测试是否已经更改
+    sql = "select * from urlsOther where url = '%s'" % (url)
+    try:
+        cursor.execute(sql)
+        # print(cursor(0)) 不能使用这样子的方法来读取cursor()
+        for i in cursor:
+            print("更新后的数据：")
+            print(i)
+    except:
+        pass
+
+
+# 测试是否可以更新链接是否被爬取标记
+def test_sql():
+    # 当前页的爬取完成之后我需要进入表中更新当前链接的获取属性
+    url = 'https://www.digikey.com/products/en/crystals-oscillators-resonators/crystals/171/page/101?FV=ffe001dd&quantity=0&ColumnSort=0&page=101&pageSize=500'
+    sql= "update urlsFirst set isOrNoGot = 1 where url = '%s'" %(url) # 如果已经被爬取过则修改 isOrNoGot 为 1
+    try:
+        cursor.execute(sql) # 执行命令
+        db.commit() # 提交事务
+    except:
+        db.rollback() # 回滚
+
+    # 测试是否已经更改
+    sql = "select * from urlsFirst where url = '%s'" %(url)
+    try:
+        cursor.execute(sql)
+        # print(cursor(0)) 不能使用这样子的方法来读取cursor()
+        for i in cursor:
+            print("更新后的数据：")
+            print(i)
+    except:
+        pass
+
+
+# 获取链接函数
 # 获取所有需要爬取的具体页面的链接存入txt文件
 # 分为三个文件存储 即客户说的分三个数据库存储文件
 def get_all_urls(url):
-    start = time.process_time()  # 开始时间
+    # start = time.process_time()  # 开始时间
     htmlContent = get_html(url)
     ulsList = htmlContent.find_all('a', class_='catfilterlink')
     print(ulsList)
+    # 最后一个是原链接 去掉
+    ulsList.pop(-1)
     urlsList = []  # 存储访问页面的url
     for url in ulsList:
         urlProducts = 'https://www.digikey.com' + url.get('href')  # 构建url使得每次访问的页面都有500个商品
@@ -282,40 +341,116 @@ def get_all_urls(url):
         pages = span.get_text().replace('Page 1/', '').replace(',', '')  # 总共有多少页
         print(pages)
         print("原网页" + urlsList[i])
-        for j in range(2, int(pages) + 1):
-            # 拼凑可以直接访问下一页的链接
-            newUrl = urlsList[i] + '/page/' + str(j) + '?FV=ffe001dd&quantity=0&ColumnSort=0&page=' + str(
-                j) + '&pageSize=500'
-            urlsList.append(newUrl)
-            print(newUrl)
-            with open('urls.txt', 'a', encoding='utf-8') as f:
-                f.write(newUrl + '\n')
-                f.close()
+        if 'crystals-oscillators-resonators' in urlsList[i] or 'integrated-circuits-ics' in urlsList[i] or 'development-boards-kits-programmers' in urlsList[i] or 'switches' in urlsList[i]:
+            for j in range(1, int(pages) + 1):
+                # 拼凑可以直接访问下一页的链接
+                newUrl = urlsList[i] + '/page/' + str(j) + '?FV=ffe001dd&quantity=0&ColumnSort=0&page=' + str(
+                    j) + '&pageSize=500'
+                urlsList.append(newUrl)
+                print(newUrl)
+                # 第一种保存链接方法 存入本地 txt
+                # with open('urlFirst.txt', 'a', encoding='utf-8') as f:
+                #     f.write(newUrl + '\n')
+                #     f.close()
+
+                # 第二种保存链接方法 存入数据库
+                try:
+                    sql = """
+                    INSERT IGNORE INTO urlsFirst (url) 
+                    VALUES('{}')""" \
+                        .format(newUrl)
+                    # print(sql)
+                    print("正在插入链接到urlsFirst表中：" + newUrl)
+                    cursor.execute(sql)
+                    db.commit()
+                except:
+                    pass
+        elif 'connectors-interconnects' in urlsList[i] or 'capacitors' in urlsList[i] or 'resistors' in urlsList[i]:
+            for j in range(1, int(pages) + 1):
+                # 拼凑可以直接访问下一页的链接
+                newUrl = urlsList[i] + '/page/' + str(j) + '?FV=ffe001dd&quantity=0&ColumnSort=0&page=' + str(
+                    j) + '&pageSize=500'
+                urlsList.append(newUrl)
+                print(newUrl)
+                # 第一种保存链接方法 存入本地 txt
+                # with open('urlSecond.txt', 'a', encoding='utf-8') as f:
+                #     f.write(newUrl + '\n')
+                #     f.close()
+                # 第二种保存链接方法 存入数据库
+                try:
+                    sql = """
+                        INSERT IGNORE INTO urlsSecond (url) 
+                        VALUES('{}')""" \
+                        .format(newUrl)
+                    # print(sql)
+                    print("正在插入链接到urlsSecond表中：" + newUrl)
+                    cursor.execute(sql)
+                    db.commit()
+                except:
+                    pass
+        else:
+            for j in range(1, int(pages) + 1):
+                # 拼凑可以直接访问下一页的链接
+                newUrl = urlsList[i] + '/page/' + str(j) + '?FV=ffe001dd&quantity=0&ColumnSort=0&page=' + str(
+                    j) + '&pageSize=500'
+                urlsList.append(newUrl)
+                print(newUrl)
+                # 第一种保存链接方法 存入本地 txt
+                # with open('urlOthers.txt', 'a', encoding='utf-8') as f:
+                #     f.write(newUrl + '\n')
+                #     f.close()
+                # 第二种保存链接方法 存入数据库
+                try:
+                    sql = """
+                        INSERT IGNORE INTO urlsOther (url) 
+                        VALUES('{}')""" \
+                        .format(newUrl)
+                    # print(sql)
+                    print("正在插入链接到urlsOther表中："+newUrl)
+                    cursor.execute(sql)
+                    db.commit()
+                except:
+                    pass
     print(len(urlsList))
-    end = time.process_time()  # 结束时间
-    SpendTime = end - start  # 测试整个程序运行的总时长
-    with open('urls.txt', 'a', encoding='utf-8') as f:
-        f.write(SpendTime)
-        f.close()
+    # end = time.process_time()  # 结束时间
+    # SpendTime = str(end - start)  # 测试整个程序运行的总时长
+    # with open('urls.txt', 'a', encoding='utf-8') as f:
+    #     f.write(SpendTime)
+    #     f.close()
 
 allUrls = []
-# 读取urls.txt 文件中的所有链接 封装成函数方便使用多线程
+# 读取链接函数存入列表方便多线程调用
 def read_all_urls():
-    filenames = 'urlsTest.txt'
-    with open(filenames) as file_object:
-        for content in file_object:
-            # print(content.rsplit())
-            allUrls.append(content.replace('\n',''))
-    return allUrls
+    # 废弃方法 不适合监测爬虫进度
+    # 读取urls.txt 文件中的所有链接 封装成函数方便使用多线程
+    # filenames = 'urlsTest.txt'
+    # with open(filenames) as file_object:
+    #     for content in file_object:
+    #         # print(content.rsplit())
+    #         allUrls.append(content.replace('\n',''))
+    # return allUrls
 
+    # 读取数据库的表文件 然后判断是否被爬取过 如果爬取过不写入列表 没有则写入
+    sql = ('select * from urlsOther where isOrNoGot != 1')#表中所有信息读取所有信息 如果 isOrNoGot 不为 1 则获取
+    # sql = ('select url from urlsFirst where isOrNoGot != 1') # 读取url 的信息
+    cursor.execute(sql)
+    urls = []
+    for i in cursor:
+        urls.append(i[0]) # 因为我只要第一个键的属性 即 url 所以直接存入列表元素的 0 即可
+    print(urls)
+    return urls
+
+# 开始函数
 # 使用多线程来测试反爬对于爬取速度的限制为多少
 from multiprocessing import Pool
 def get_url_content_test():
-    # 读取存入所有具体信息页面的url的txt文件写入到列表
+    #
+    # 添加一个检测当前CPU核数的代码 将该数字填入到下面的代码中去实现自动的多线程爬取
 
+    # 启动多线程爬取程序
     urls = read_all_urls()
     start_2 = time.time()
-    pool = Pool(processes=10)
+    pool = Pool(processes=1)
     pool.map(get_html_sensor, urls)
     end_2 = time.time()
     print('2进程爬虫耗时:', end_2 - start_2)
@@ -328,5 +463,13 @@ def get_url_content_test():
 
 if __name__=='__main__':
     url= 'https://www.digikey.com/products/en'
-    get_html_sensor('https://www.digikey.com/products/en/audio-products/alarms-buzzers-and-sirens/157/page/2?FV=ffe001dd&quantity=0&ColumnSort=0&page=2&pageSize=500')
-
+    # 第一步 将所有得链接分类存储和保存在数据库中
+    get_all_urls(url)
+        # 测试读取数据库爬取链接代码
+    # read_all_urls()
+        # 测试更新数据库数据代码
+    # test_sql()
+    # 第二步 访问分类存储的链接 爬取之后标注为 1 默认值为0
+    # get_url_content_test()
+    # 第三步 多线程爬取图片存储在分类的文件夹下
+    # get_images(folderName,imageUrl)
