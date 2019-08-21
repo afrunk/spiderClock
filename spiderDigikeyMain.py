@@ -41,9 +41,9 @@ def write_database_operation(tdsList,itemAll):
     print("成功链接数据库")
     try:
         sql = """
-        INSERT IGNORE INTO data (Kind,PaKind,infourl,imagesPath,diginum,ManufacturePartNumber,Manufacturer,Description,QuantityAvailable,price,minmumQuantity,Series,ParaData) 
-        VALUES('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')"""\
-        .format(tdsList[0],tdsList[1],tdsList[2],tdsList[3],tdsList[4],tdsList[5],tdsList[6],tdsList[7],tdsList[8],tdsList[9],tdsList[10],tdsList[11],itemAll)
+        INSERT IGNORE INTO data (Kind,PaKind,infourl,imageUrl,imagesPath,diginum,ManufacturePartNumber,Manufacturer,Description,QuantityAvailable,price,minmumQuantity,Series,ParaData) 
+        VALUES('{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}')"""\
+        .format(tdsList[0],tdsList[1],tdsList[2],tdsList[3],tdsList[4],tdsList[5],tdsList[6],tdsList[7],tdsList[8],tdsList[9],tdsList[10],tdsList[11],tdsList[12],itemAll)
         print(sql)
         cursor.execute(sql)
         db.commit()
@@ -52,6 +52,7 @@ def write_database_operation(tdsList,itemAll):
 
 
 # 生成随机字符串为图片命名
+# 直接放弃了 使用id作为图片命名
 def create_random():
     # 生成随机图片名
     import random, string
@@ -66,25 +67,42 @@ def create_random():
 # 下载图片和返回给数据库一个图片的路径
 # 传入大类目的名字 因为导出使用的是大类目 后续使用大类目作为文件夹名
 # 图片的名字使用十二位随机字符串
+# 访问速度 所以使用的新韩淑
 def get_images(folderName,imageUrl):
     # 随机生成字符串
     n =create_random()
     # 保存文件夹的名字即我们的大目录名
     daleimu =folderName
-    respone = requests.get('https://'+imageUrl,headers=headers)
-    dirname = daleimu
-    if os.path.exists(daleimu) == False:
-        os.makedirs(daleimu) #需要在爬取一个新的类目时即创建文件夹
-    filename = dirname +'/'+ n[0]+'.JPG'
-    print(filename)
-    fp = open(filename,'wb')
-    fp.write(respone.content)
-    fp.close()
+    # 是否有图片 如果没有图片使用统一的默认无图片路径 如果有的话在爬取和存储
+    if imageUrl == 'photo not available':
+        filename = 'pna_en.jpg'
+    else:
+        # respone = requests.get('https://'+imageUrl,headers=headers)
+        dirname = daleimu
+        if os.path.exists(daleimu) == False:
+            os.makedirs(daleimu) #需要在爬取一个新的类目时即创建文件夹
+        filename = dirname +'/'+ n[0]+'.JPG'
+        print(filename)
+        # fp = open(filename,'wb')
+        # fp.write(respone.content)
+        # fp.close()
     return filename
 
 
+# 直接从数据库中读取图片链接和id下载下来然后存入三个文件夹下
+def get_images_new(ID,imageUrl):
+    if imageUrl == 'photo not available':
+        filename = 'pna_en.jpg'
+    else:
+        respone = requests.get('https://'+imageUrl,headers=headers)
+        filename = ID+'.JPG'
+        print(filename)
+        fp = open(filename,'wb')
+        fp.write(respone.content)
+        fp.close()
+
 navigationBars = [] # 原属性栏列表
-navigationBarsReally = [0,0,0,0] # 处理后属性栏列表 因为我们需要为前面的三个选项赋值 所以必须先定义
+navigationBarsReally = [0,0,0,0,0] # 处理后属性栏列表 因为我们需要为前面的三个选项赋值 所以必须先定义
 # 将页面的导航栏删除掉不需要的 以及将其处理成我们存入数据库的格式
 def deal_navigation(navigationBars):
     # 处理导航栏
@@ -97,7 +115,8 @@ def deal_navigation(navigationBars):
     navigationBarsReally[0] = 'Kine'  # 大类目
     navigationBarsReally[1] = 'MinKine'  # 小类目
     navigationBarsReally[2] = 'infoUrl'  # 详情页链接
-    navigationBarsReally[3] = 'imagesPath' #图片路径
+    navigationBarsReally[4] = 'imagesPath' #图片路径
+    navigationBarsReally[3] = 'imageUrl'
     for i in range(1,len(navigationBars)): # image 的 td不能删除 所以在这里直接掠过1
         if i < 9:
             # 将不变的导航栏写入新的列表
@@ -120,7 +139,7 @@ def get_html(url):
 
 # 提取HTML的具体信息 处理后存入列表供写入数据库的函数调用
 def get_html_sensor(url):
-
+    print("正在爬取链接是："+url)
     soup=get_html(url)
     # 匹配类目
     hFirst = soup.find('h1').get_text()
@@ -165,37 +184,47 @@ def get_html_sensor(url):
             # print(tdsList)
             if i == 0:
                 try:
-                    # 给所有的需要写入数据库的数据赋初值
-                    imgUrl = 1
-                    infoUrl = 1
-                    infoUrl=  1
-
                     # 提取图片的链接和具体商品的详情页存入到列表中
-                    imgUrl = tds[i].find('img', 'pszoomer').get('zoomimg').replace('//', '')
-                    # print(imgUrl)
-                    infoUrl = 'https://www.digikey.com'+ tds[i].find('a').get('href')
-                    # print(imgUrl)
-                    # print(infoUrl)
+                    infoUrl = 'https://www.digikey.com' + tds[i].find('a').get('href')
                     tdsList.append(infoUrl)
-                    # tdsList.append(imgUrl)
+                    # print('InfoUrl 是否被抓取到 '+ infoUrl)
+                    # 添加try 中 如果没有访问到 imgUrl 之后跳转到 except
+                    imgUrl = tds[i].find('img', 'pszoomer').get('zoomimg').replace('//', '')
+                    tdsList.append(imgUrl)
+                    # print("当前是否访问到imgUrl")
+                    # print(imgUrl)
+                    # print("访问到了！")
                     # 下载图片 并将图片的下载路径传入
-                    imagePath = get_images(tdsList[0],imgUrl)
-                    # print(imagePath)
-                    tdsList.append(imagePath)
-
+                    # imagePath = 'Testpath'
+                    # imagePath = get_images(tdsList[0],imgUrl)
+                    # # print(imagePath)
+                    # tdsList.append(imagePath)
                 except:
-                    pass
+                    imgUrl= 'photo not available'
+                    tdsList.append(imgUrl)
+                    # imagePath = 'Testpath'
+                    # tdsList.append(imagePath)
             elif i == 5 :
                 # print(i)
                 # print(tds[i])
                 # 使用 replace去除掉html中的空格和回车
-                quantityAvailable = tds[i].find('span','desktop').get_text().replace('\n', ' ').replace('\r', ' ').strip()
-                # print(quantityAvailable)
-                tdsList.append(quantityAvailable)
+                try:
+                    quantityAvailable = tds[i].find('span','desktop').get_text().replace('\n', ' ').replace('\r', ' ').strip()
+                    # print(quantityAvailable)
+                    tdsList.append(quantityAvailable)
+                except:
+                    quantityAvailable=''
+                    tdsList.append(quantityAvailable)
             elif i == 7 :
-                quantityAvailable = tds[i].find('span', 'desktop').get_text().replace('\n', ' ').replace('\t', ' ').replace('\r', ' ').strip()
-                # print(quantityAvailable)
-                tdsList.append(quantityAvailable)
+                try:
+                    quantityAvailable = tds[i].find('span', 'desktop').get_text().replace('\n', ' ').replace('\t', ' ').replace('\r', ' ').strip()
+                    # print(quantityAvailable)
+                    tdsList.append(quantityAvailable)
+                except:
+                    quantityAvailable = ''
+                    tdsList.append(quantityAvailable)
+
+
             elif 0 < i < 9 and i != 5  :
                 tdsContent = tds[i].get_text().strip().strip().replace('Available:','').replace('Minimum:','')
                 # print(tdsContent)
@@ -205,6 +234,18 @@ def get_html_sensor(url):
                 tdsContent = tds[i].get_text().strip().strip().replace('Available:', '').replace('Minimum:', '')
                 # print(tdsContent)
                 tdsItems += '<|>' + tdsContent
+
+        # 图片的文件名为 ID + 'jpg'
+        # 如果没有图片的话就直接保存 Test.jpg 文件
+        if imgUrl == 'photo not available':
+            imagePath = 'Test.jpg'
+            print(imagePath)
+            tdsList.insert(4, imagePath)
+
+        else:
+            imagePath =tdsList[0]+'/'+tdsList[1]+'/'+tdsList[4] +'.JPG'
+            print(imagePath)
+            tdsList.insert(4,imagePath)
 
         print(navigationBarsReally)
         print(tdsList)  # 存入到数据库的各个属性值
@@ -217,40 +258,75 @@ def get_html_sensor(url):
         # 必须在数据更新前进行写入操作
         write_database_operation(tdsList,itemAll)
 
-
-if __name__=='__main__':
-    start =time.process_time() # 开始时间
-    url= 'https://www.digikey.com/products/en'
+# 获取所有需要爬取的具体页面的链接存入txt文件
+# 分为三个文件存储 即客户说的分三个数据库存储文件
+def get_all_urls(url):
+    start = time.process_time()  # 开始时间
     htmlContent = get_html(url)
-    ulsList = htmlContent.find_all('a',class_='catfilterlink')
+    ulsList = htmlContent.find_all('a', class_='catfilterlink')
     print(ulsList)
-    urlsList = [] #存储访问页面的url
+    urlsList = []  # 存储访问页面的url
     for url in ulsList:
-        urlProducts = 'https://www.digikey.com'+url.get('href')# 构建url使得每次访问的页面都有500个商品
+        urlProducts = 'https://www.digikey.com' + url.get('href')  # 构建url使得每次访问的页面都有500个商品
         print(urlProducts)
         urlsList.append(urlProducts)
     #     with open('urls.txt', 'a', encoding='utf-8') as f:
     #         f.write(urlProducts + '\n')
     #         f.close()
 
-    for i in range(254,len(urlsList)):
-        htmlDetailsPages = get_html(urlsList[i]+'?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500' )# 添加后缀来计算500一页的商品有多少页
-        #访问页面 查看页数后是否还有数字
-        span=htmlDetailsPages.find('span',class_='current-page')
-        pages =span.get_text().replace('Page 1/','').replace(',','') # 总共有多少页
+    for i in range(0, len(urlsList)):
+        htmlDetailsPages = get_html(
+            urlsList[i] + '?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500')  # 添加后缀来计算500一页的商品有多少页
+        # 访问页面 查看页数后是否还有数字
+        span = htmlDetailsPages.find('span', class_='current-page')
+        pages = span.get_text().replace('Page 1/', '').replace(',', '')  # 总共有多少页
         print(pages)
-        print("原网页"+urlsList[i])
-        for j in range(2,int(pages)+1):
+        print("原网页" + urlsList[i])
+        for j in range(2, int(pages) + 1):
             # 拼凑可以直接访问下一页的链接
-            newUrl = urlsList[i]+'/page/'+str(j)+'?FV=ffe001dd&quantity=0&ColumnSort=0&page='+str(j)+'&pageSize=500'
+            newUrl = urlsList[i] + '/page/' + str(j) + '?FV=ffe001dd&quantity=0&ColumnSort=0&page=' + str(
+                j) + '&pageSize=500'
             urlsList.append(newUrl)
             print(newUrl)
-            with open('urls.txt','a',encoding='utf-8') as f:
-                f.write(newUrl+'\n')
+            with open('urls.txt', 'a', encoding='utf-8') as f:
+                f.write(newUrl + '\n')
                 f.close()
     print(len(urlsList))
-    end=time.process_time() # 结束时间
-    SpendTime = end-start # 测试整个程序运行的总时长
-    with open('urls.txt','a',encoding='utf-8') as f :
+    end = time.process_time()  # 结束时间
+    SpendTime = end - start  # 测试整个程序运行的总时长
+    with open('urls.txt', 'a', encoding='utf-8') as f:
         f.write(SpendTime)
         f.close()
+
+allUrls = []
+# 读取urls.txt 文件中的所有链接 封装成函数方便使用多线程
+def read_all_urls():
+    filenames = 'urlsTest.txt'
+    with open(filenames) as file_object:
+        for content in file_object:
+            # print(content.rsplit())
+            allUrls.append(content.replace('\n',''))
+    return allUrls
+
+# 使用多线程来测试反爬对于爬取速度的限制为多少
+from multiprocessing import Pool
+def get_url_content_test():
+    # 读取存入所有具体信息页面的url的txt文件写入到列表
+
+    urls = read_all_urls()
+    start_2 = time.time()
+    pool = Pool(processes=10)
+    pool.map(get_html_sensor, urls)
+    end_2 = time.time()
+    print('2进程爬虫耗时:', end_2 - start_2)
+
+    # start_3 = time.time()
+    # pool = Pool(processes=10)
+    # pool.map(get_html_sensor, urls)
+    # end_3 = time.time()
+    # print('2进程爬虫耗时:', end_3 - start_3)
+
+if __name__=='__main__':
+    url= 'https://www.digikey.com/products/en'
+    get_html_sensor('https://www.digikey.com/products/en/audio-products/alarms-buzzers-and-sirens/157/page/2?FV=ffe001dd&quantity=0&ColumnSort=0&page=2&pageSize=500')
+
