@@ -61,15 +61,15 @@ def write_database_operation(tdsList,itemAll):
 
 # 生成随机字符串为图片命名
 # 直接放弃了 使用id作为图片命名
-def create_random():
-    # 生成随机图片名
-    import random, string
-    s = string.ascii_letters + string.digits
-    print(s)
-
-    n = [''.join(random.choices(s, k=12)) for I in range(60000)] #存储随机生成字符串的列表
-    # print(n)
-    return n
+# def create_random():
+#     # 生成随机图片名
+#     import random, string
+#     s = string.ascii_letters + string.digits
+#     print(s)
+#
+#     n = [''.join(random.choices(s, k=12)) for I in range(60000)] #存储随机生成字符串的列表
+#     # print(n)
+#     return n
 
 
 # 废弃
@@ -98,23 +98,7 @@ def create_random():
 #     return filename
 
 
-# 直接从数据库中读取图片链接和id下载下来然后存入三个文件夹下
-def get_images_new():
-    try:
-        sql = 'select imgerUrl, from urlsOther ' #
-        cursor.execute(sql)
-        for i in cursor:
-            if imageUrl == 'photo not available':
-                filename = 'pna_en.jpg'
-            else:
-                respone = requests.get('https://'+imageUrl,headers=headers)
-                filename = ID+'.JPG'
-                print(filename)
-                fp = open(filename,'wb')
-                fp.write(respone.content)
-                fp.close()
-    except:
-        pass
+
 
 navigationBars = [] # 原属性栏列表
 navigationBarsReally = [0,0,0,0,0] # 处理后属性栏列表 因为我们需要为前面的三个选项赋值 所以必须先定义
@@ -280,15 +264,15 @@ def get_html_sensor(url):
         db.rollback()  # 回滚
 
     # 测试是否已经更改
-    sql = "select * from urlsOther where url = '%s'" % (url)
-    try:
-        cursor.execute(sql)
-        # print(cursor(0)) 不能使用这样子的方法来读取cursor()
-        for i in cursor:
-            print("更新后的数据：")
-            print(i)
-    except:
-        pass
+    # sql = "select * from urlsOther where url = '%s'" % (url)
+    # try:
+    #     cursor.execute(sql)
+    #     # print(cursor(0)) 不能使用这样子的方法来读取cursor()
+    #     for i in cursor:
+    #         print("更新后的数据：")
+    #         print(i)
+    # except:
+    #     pass
 
 
 # 测试是否可以更新链接是否被爬取标记
@@ -332,8 +316,26 @@ def get_all_urls(url):
     #     with open('urls.txt', 'a', encoding='utf-8') as f:
     #         f.write(urlProducts + '\n')
     #         f.close()
-
+    # 遍历首页获取到的所有链接进行插入
     for i in range(0, len(urlsList)):
+
+        # 多表查询
+        """
+        # 添加一个判断链接是否已经存在的值 如果已经存在则不不需要进行爬取的下一步
+        testUrl=urlsList[i]+ '?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500'
+        # testUrl= 'https://www.digikey.com/products/en/audio-products/accessories/159/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500'
+        print(testUrl)
+        # sql = "select count(*) from urlsFirst where url='%s'" % (testUrl) # 从一个表中查询
+        sql="select * from urlsFirst where url='%s' union select * from urlsSecond where url='%s' union select * from urlsOther where url='%s'" %(testUrl,testUrl,testUrl)
+        cursor.execute(sql)
+        print(cursor.fetchone())
+        # print(list(cursor.fetchone()[0])) # 输出查询到的数字的类型
+        if(cursor.fetchone() == None):
+            print("数据库中已经存在"+urlsList[i])
+            continue # 使用continue 跳出当前if循环 使用break 可以跳出当前 for 循环
+        else:
+        """
+
         htmlDetailsPages = get_html(
             urlsList[i] + '?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500')  # 添加后缀来计算500一页的商品有多少页
         # 访问页面 查看页数后是否还有数字
@@ -362,7 +364,6 @@ def get_all_urls(url):
                     # print(sql)
                     print("正在插入链接到urlsFirst表中：" + newUrl)
                     cursor.execute(sql)
-                    db.commit()
                 except:
                     pass
         elif 'connectors-interconnects' in urlsList[i] or 'capacitors' in urlsList[i] or 'resistors' in urlsList[i]:
@@ -385,7 +386,7 @@ def get_all_urls(url):
                     # print(sql)
                     print("正在插入链接到urlsSecond表中：" + newUrl)
                     cursor.execute(sql)
-                    db.commit()
+
                 except:
                     pass
         else:
@@ -408,7 +409,7 @@ def get_all_urls(url):
                     # print(sql)
                     print("正在插入链接到urlsOther表中："+newUrl)
                     cursor.execute(sql)
-                    db.commit()
+
                 except:
                     pass
     print(len(urlsList))

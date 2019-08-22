@@ -123,12 +123,15 @@ A: 查看链接中是否有这些着重强调要分类的大目录和小目录�
         - 仍然是从数据库中读取一个表中的所有数据，如果所有的链接已经被爬取那么就不存入链接池，否则存入
         - 在每次的爬取完成之后进行标注 在表中将当前链接的后缀标注为 1
         - 有三个表 需要生成三个程序
+- 将图片下载的函数完成，如果没有图片的话就直接使用的Test.jpg 如果有的话就使用固定的文件夹下保存 在数据库中添加一个字段 判断是否下载完成 如果下载完成的修改数字 实现检测
+    - 读取数据库中的所有没有被下载的链接和存储地址 存入字典
+    - 传入多进程中多个值
+    - 构建多层文件夹
+
+
 
 待完成的任务
-
-- 将图片下载的函数完成，如果没有图片的话就直接使用的Test.jpg 如果有的话就使用固定的文件夹下保存 在数据库中添加一个字段 判断是否下载完成 如果下载完成的修改数字 实现检测
 - 添加报错函数 整合整个程序的自动化能力，即便是中途断了也可以直接跳过继续运行 即检测程序 这就是数据库的最大的功能
-
 
 - 导出要求：
     - 导出条件设置：一种型号可能有三条数据，可以选择条件导出，比如不要采购数以上量数据 自定义设置
@@ -146,3 +149,5 @@ A: 查看链接中是否有这些着重强调要分类的大目录和小目录�
     - 分类采集和导出
     - 网站有新商品商城，程序更新新数据入库，能识别已经入库数据并不再重复入库
 '''
+
+select * from urlsFirst where url='https://www.digikey.com/products/en/audio-products/accessories/159/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500' union select * from urlsSecond where url='https://www.digikey.com/products/en/audio-products/accessories/159/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500' union select * from urlsOther where url='https://www.digikey.com/products/en/audio-products/accessories/159/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500'
