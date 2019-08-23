@@ -139,6 +139,7 @@ def get_html(url):
 # 提取HTML的具体信息 处理后存入列表供写入数据库的函数调用
 def get_html_sensor(url):
     print("正在爬取链接是："+url)
+
     soup=get_html(url)
     # 匹配类目
     hFirst = soup.find('h1').get_text()
@@ -178,6 +179,7 @@ def get_html_sensor(url):
         # 将前面提取的类目存入tdsList
         tdsList[0] = hFirstList[0] # 大类目
         tdsList[1] = hFirstList[1] # 小类目
+        # 详情页 图片路径 id Manufacturer Part Number Manufacturer Description Quantity Available price Minimum Quantity Series
         for i in range(len(tds)):
             # 获取图片的下载链接、商品的具体链接、以及添加商品的保存路径
             # print(tdsList)
@@ -465,7 +467,7 @@ def get_url_content_test():
 if __name__=='__main__':
     url= 'https://www.digikey.com/products/en'
     # 第一步 将所有得链接分类存储和保存在数据库中
-    get_all_urls(url)
+    # get_all_urls(url)
         # 测试读取数据库爬取链接代码
     # read_all_urls()
         # 测试更新数据库数据代码
@@ -474,3 +476,5 @@ if __name__=='__main__':
     # get_url_content_test()
     # 第三步 多线程爬取图片存储在分类的文件夹下
     # get_images(folderName,imageUrl)
+    url = 'https://www.digikey.com/products/en/computer-equipment/kvm-switches-keyboard-video-mouse-cables/896/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500'
+    get_html_sensor(url)

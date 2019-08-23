@@ -64,18 +64,10 @@ headers ={
         'upgrade-insecure-requests':'1',
         'user-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36'
     }
-
-# 直接从数据库中读取图片链接和id下载下来然后存入三个文件夹下
-def get_images_new(content):
-    # print("这一部分的字典是：")
-    imageUrl = content[0]
-    path = content[1]
-    # print(imageUrl) # 图片链接
-    # print(path) # 图片路径
-
-    # 判断是否有图片 如果没有则不下载 如果有的话就
-    if imageUrl != 'photo not available':
-        # path = 'Audio Products/Alarms, Buzzers, and Sirens/668-1062-2-ND.JPG'
+# 测试文件夹方法
+def pathCreate():
+    paths =['Audio Products/Alarms, Buzzers, and Sirens/668-1062-2-ND.JPG','Audio Products/Microphones/2104-MO044202-3-ND.JPG']
+    for path in paths:
         pathlist = path.split('/')
         # print(pathlist)
         kind = pathlist[0]
@@ -89,52 +81,77 @@ def get_images_new(content):
             # print(cur_dir_1)
             if os.path.exists(cur_dir_1) == False:
                 os.makedirs(cur_dir_1)
+        else:
+            if os.path.exists(cur_dir_1) == False:
+                os.makedirs(cur_dir_1)
         filename = cur_dir_1 + '\\' + imgname
         print(filename)
-        respone = requests.get('https://'+imageUrl,headers=headers)
-        fp = open(filename,'wb')
-        fp.write(respone.content)
-        fp.close()
-        print("该图片已经保存，路径是：%s,链接是：%s"%(filename,imageUrl))
 
 
-    # 更新图片获取状态
-    sql = "update newdata set imgGot = 1 where imageUrl='%s'" % (imageUrl)  # 如果已经被爬取过则修改 isOrNoGot 为 1
+# 直接从数据库中读取图片链接和id下载下来然后存入三个文件夹下
+def get_images_new(content):
+    # i = 0  # 记录保存图片的页数
+    # print("这一部分的字典是：")
+    imageUrl = content[0]
+    path = content[1]
+    # imageUrl = 'media.digikey.com/photos/TDK%20Photos/PS1240P02AT.jpg'
+    # path = 'Audio Products/Alarms, Buzzers, and Sirens/445-2525-3-ND.JPG'
+    # print(imageUrl) # 图片链接
+    # print(path) # 图片路径
     try:
-        cursor.execute(sql)  # 执行命令
-        # db.commit()  # 提交事务
+        # 判断是否有图片 如果没有则不下载 如果有的话就
+        if imageUrl != 'photo not available':
+            # path = 'Audio Products/Alarms, Buzzers, and Sirens/668-1062-2-ND.JPG'
+            pathlist = path.split('/')
+            # print(pathlist)
+            kind = pathlist[0]
+            pakind = pathlist[1]
+            imgname = pathlist[2]
+            cur_dir = 'G:\Python_Data\ComputerDesig\spiderDigikey\\' + kind
+            # print(cur_dir)
+            cur_dir_1 = cur_dir + '\\' + pakind
+            if os.path.isdir(cur_dir) == False:
+                os.makedirs(kind)  # 需要在爬取一个新的类目时即创建文件夹
+                # print(cur_dir_1)
+                if os.path.exists(cur_dir_1) == False:
+                    os.makedirs(cur_dir_1)
+            else:
+                if os.path.exists(cur_dir_1) == False:
+                    os.makedirs(cur_dir_1)
+            filename = cur_dir_1 + '\\' + imgname
+            print(filename)
+            respone = requests.get('https://'+imageUrl,headers=headers,timeout=5) # 超时2s就放弃
+            fp = open(filename,'wb')
+            fp.write(respone.content)
+            fp.close()
+            print("图片已经保存，路径是：%s,链接是：%s" %(filename,imageUrl))
+            # 更新图片获取状态
+            sql = "update newdata set imgGot = 1 where imageUrl='%s'" % (imageUrl)  # 如果已经被爬取过则修改 isOrNoGot 为 1
+            try:
+                cursor.execute(sql)  # 执行命令
+                db.commit()  # 提交事务
+            except:
+                db.rollback()  # 回滚
+            time.sleep(2)
     except:
-        db.rollback()  # 回滚
+        pass
 
-# 测试文件夹方法
-# def pathCreate():
-#     path ='Audio Products/Alarms, Buzzers, and Sirens/668-1062-2-ND.JPG'
-#     pathlist=path.split('/')
-#     # print(pathlist)
-#     kind = pathlist[0]
-#     pakind = pathlist[1]
-#     imgname = pathlist[2]
-#     cur_dir ='G:\Python_Data\ComputerDesig\spiderDigikey\\'+kind
-#     print(cur_dir)
-#     if os.path.isdir(cur_dir) == False:
-#         os.makedirs(kind) #需要在爬取一个新的类目时即创建文件夹
-#         cur_dir=cur_dir+'\\'+pakind
-#         print(cur_dir)
-#         if os.path.exists(cur_dir) == False:
-#             os.makedirs(cur_dir)
-#             filename = cur_dir+'\\'+ imgname
-#             print(filename)
+
+
 
 # 多进程入口
-def PoolDrive():
+def PoolDrive(Kind):
     # 请求图片链接存入字典
     urllist = []
     pathlist = []
     try:
         dict = {}
         # 查询的是保存爬取具体信息的页面
-        sql = "select imageUrl,imageGot,imagesPath from newdata where imageGot='0' and imageUrl!='photo not available'"  # 获取没有被爬取过的图片链接
+
+        sql = "select imageUrl,imageGot,imagesPath from newdata where imageGot='0' and imageUrl!='photo not available'  and Kind='%s'" %(Kind)  # 获取没有被爬取过的图片链接
         cursor.execute(sql)
+        print(sql)
+        # print(cursor.fetchone()[0])
         for i in cursor:
             imageUrl = i[0]
             path = i[2]
@@ -142,18 +159,31 @@ def PoolDrive():
             urllist.append(imageUrl)
             pathlist.append(path)
     except:
+        print("导出失败，请联系技术！")
         pass
-    # print(urllist,pathlist)
+    print(urllist,pathlist)
     zip_args = list(zip(urllist, pathlist))  # 使用该方法来传递多个参数到多进程中去
     # print(zip_args)
-    pool = Pool(processes=10)  # 设置多进程数量
+    pool = Pool(processes=100)  # 设置多进程数量
     pool.map(get_images_new, zip_args)  # 注意此处只传入一个参数 其中包括了2个值
     pool.close()
     pool.join()
 
 if __name__=='__main__':
     # 获取图片函数
+    url=''
     # get_images_new(url)
-    PoolDrive()
+    # 测试文件夹
+    # pathCreate()
+    # 头部
+    Kind = input("请输入您要下载的图片所属类目：")
+    # print(Kind)
+    # PoolDrive(Kind)
+    try:
+        sql="select count(*) from newdata where imageGot='0' and imageUrl!='photo not available'  and Kind='%s'" % (Kind)
+        cursor.execute(sql)
+        print(cursor.fetchone()[0])
+    except:
+        pass
 
 
