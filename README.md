@@ -1,4 +1,11 @@
 ### 抓取Digikey 网站全部电子元器件的具体信息
+#### 主要设计技术
+- python :基础语言
+- BS4：分析HTML，提取我们所需要的信息
+- request：发送伪造请求
+- mysql:存储抓取到的数据
+- Navicate:mysql 工具
+
 [Digikey 美国电子商品](https://www.digikey.com/products/en)，我们需要爬取的内容如下图：<br>
 ![首页](https://github.com/afrunk/spiderClock/blob/master/OtherDoc/1.png)
 
