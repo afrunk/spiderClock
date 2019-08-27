@@ -145,7 +145,7 @@ A: 查看链接中是否有这些着重强调要分类的大目录和小目录�
     - 分类导出
         - 自定义导出具体的数量
         - 自定义导出的类目
-        - 可以添加添加一个宝贝类目
+        - 可以添加一个宝贝类目
 
     文件夹放图片 csv文件放置各个属性
 
@@ -200,3 +200,7 @@ A: 查看链接中是否有这些着重强调要分类的大目录和小目录�
 '''
 
 select * from urlsFirst where url='https://www.digikey.com/products/en/audio-products/accessories/159/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500' union select * from urlsSecond where url='https://www.digikey.com/products/en/audio-products/accessories/159/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500' union select * from urlsOther where url='https://www.digikey.com/products/en/audio-products/accessories/159/page/1?FV=ffe001dd&quantity=0&ColumnSort=0&page=1&pageSize=500'
+
+
+log-url 存储未爬取到的具体链接
+log-html 存储未入库的链接列表

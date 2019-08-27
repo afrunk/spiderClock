@@ -10,9 +10,9 @@ db = pymysql.connect(host='127.0.0.1',
 cursor = db.cursor()
 def get_category_num(category):
     # category ='Alarms, Buzzers, and Sirens'
-    data = 'newdata'
+    data = 'data'
     try:
-        sql = "select count(*) from %s where PaKind='%s'" %(pymysql.escape_string(data),category) # 注意 必须将where 后的属性和等号放在一起才可以
+        sql = "select count(*) from %s where Kind='%s'" %(pymysql.escape_string(data),category) # 注意 必须将where 后的属性和等号放在一起才可以
         print(sql)
         cursor.execute(sql)
         print(cursor.fetchone())
